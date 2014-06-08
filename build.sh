@@ -19,7 +19,15 @@ if [[ ! $(git tag | grep -e "^release/") ]]; then
   echo 'Could not find any releases.  You can make some with `git tag release/<version_number> [commit reference]`'
 fi
 
+make_scripts_executable() {
+  for file in $(find . -name "*.sh" -o -name "*.py" | xargs ls -l | awk '/^...-/ {print $NF}'); do
+    echo "WARNING: '$file' appears to be a script but is not executable.  Updating permissions"
+    chmod +x $file
+  done
+}
+
 echo "Building ${container_name}:latest from $DIR"
+make_scripts_executable
 docker build -t ${container_name} $DIR
 
 for version in $(git tag | awk '/release\// { sub(/^release\//,""); print }'); do
@@ -29,7 +37,7 @@ for version in $(git tag | awk '/release\// { sub(/^release\//,""); print }'); d
   cd $TEMP_DIR
   tar xf ${TEMP_DIR}/${PROJECT}.tar
   echo "Building ${container_name}:${version} from $DIR"
-  docker build -t ${container_name}:${version} $TEMP_DIR 
+  make_scripts_executable
+  docker build -t ${container_name}:${version} $TEMP_DIR
   rm -r $TEMP_DIR
 done
-
